@@ -1,7 +1,12 @@
+require("dotenv").config();
+
 const express = require('express');
+const mongoose = require('mongoose');
+const connect = require('./database/db.js');
 
 const app = express();
 app.use(express.json());
+connect();
 
 const { v4: uuidv4 } = require('uuid');
 
