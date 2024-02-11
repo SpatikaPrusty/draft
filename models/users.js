@@ -11,4 +11,5 @@ const users = new schema({
     incomePerAnnum: {type: Number, default: 0}
 });
 
-module.exports = users;
+const User = mongoose.model('User', users);
+module.exports = User;
