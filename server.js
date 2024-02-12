@@ -3,37 +3,41 @@ const dotenv = require("dotenv").config();
 const express = require('express');
 const mongoose = require('mongoose');
 const connect = require('./database/db.js');
+const users = require('./models/users.js');
 
 const app = express();
+
 app.use(express.json());
 connect();
 
 const { v4: uuidv4 } = require('uuid');
 
-let users= [{
-    name:'Spatika',
-    age: 21,
-    isSmoke: true,
-    isDiabetic: false,
-    incomePerAnnum: 500000,
-    id: '1b892a53-l310-4347-b350-14c017fe0872'
-},
-{
-    name:'Lucky',
-    age: 49,
-    isSmoke: false,
-    isDiabetic: false,
-    incomePerAnnum: 900000,
-    id: '1b772a93-f318-4347-b350-14d917fe0892'
-},
-{
-    name:'Nipun',
-    age: 30,
-    isSmoke: false,
-    isDiabetic: true,
-    incomePerAnnum: 1000000,
-    id: '1d772x53-f318-4347-b350-14f017fe0018'
-}]
+let users= [
+// {
+//     name:'Spatika',
+//     age: 21,
+//     isSmoke: true,
+//     isDiabetic: false,
+//     incomePerAnnum: 500000,
+//     id: '1b892a53-l310-4347-b350-14c017fe0872'
+// },
+// {
+//     name:'Lucky',
+//     age: 49,
+//     isSmoke: false,
+//     isDiabetic: false,
+//     incomePerAnnum: 900000,
+//     id: '1b772a93-f318-4347-b350-14d917fe0892'
+// },
+// {
+//     name:'Nipun',
+//     age: 30,
+//     isSmoke: false,
+//     isDiabetic: true,
+//     incomePerAnnum: 1000000,
+//     id: '1d772x53-f318-4347-b350-14f017fe0018'
+// }
+]
 
 let policies = [
     // Policies for smokers

@@ -21,5 +21,5 @@ const userSchema = mongoose.Schema(
 //     incomePerAnnum: {type: Number, default: 0}
 // });
 
-const User = mongoose.model('User', userSchema);
+const users = mongoose.model('User', userSchema);
 module.exports = User;
