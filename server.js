@@ -1,10 +1,9 @@
 const dotenv = require("dotenv").config();
-
 const express = require('express');
 const mongoose = require('mongoose');
 const connect = require('./database/db.js');
 const users = require('./models/users.js');
-
+const Policy = require('./models/policy.js');
 const app = express();
 
 app.use(express.json());
@@ -16,6 +15,7 @@ let USERS= [
 {
     name:'Spatika',
     age: 21,
+    gender: "female",
     isSmoke: true,
     isDiabetic: false,
     incomePerAnnum: 500000,
@@ -24,6 +24,7 @@ let USERS= [
 {
     name:'Lucky',
     age: 49,
+    gender: "female",
     isSmoke: false,
     isDiabetic: false,
     incomePerAnnum: 900000,
@@ -32,6 +33,7 @@ let USERS= [
 {
     name:'Nipun',
     age: 30,
+    gender: "male",
     isSmoke: false,
     isDiabetic: true,
     incomePerAnnum: 1000000,
@@ -40,89 +42,95 @@ let USERS= [
 ];
 
 let policies = [
-    // Policies for smokers
     {
-        policyNum: '1',
-        premium: '20000',
-        sumAssured: '1000000',
-        policyTerm: '5 years'
+        policyNum: 1,
+        premium: 20000,
+        sumAssured: 1000000,
+        policyTerm: '5 years',
+        frequency: 'Annual'
     },
     {
-        policyNum: '2',
-        premium: '30000',
-        sumAssured: '1500000',
-        policyTerm: '10 years'
+        policyNum: 2,
+        premium: 30000,
+        sumAssured: 1500000,
+        policyTerm: '10 years',
+        frequency: 'Semi-annual'
     },
     {
-        policyNum: '3',
-        premium: '40000',
-        sumAssured: '2000000',
-        policyTerm: '15 years'
+        policyNum: 3,
+        premium: 40000,
+        sumAssured: 2000000,
+        policyTerm: '15 years',
+        frequency: 'Quarterly'
     },
     {
-        policyNum: '4',
-        premium: '25000',
-        sumAssured: '1200000',
-        policyTerm: '7 years'
+        policyNum: 4,
+        premium: 25000,
+        sumAssured: 1200000,
+        policyTerm: '7 years',
+        frequency: 'Monthly'
     },
     {
-        policyNum: '5',
-        premium: '35000',
-        sumAssured: '1800000',
-        policyTerm: '12 years'
+        policyNum: 5,
+        premium: 35000,
+        sumAssured: 1800000,
+        policyTerm: '12 years',
+        frequency: 'Annual'
     },
     {
-        policyNum: '6',
-        premium: '45000',
-        sumAssured: '2500000',
-        policyTerm: '20 years'
+        policyNum: 6,
+        premium: 45000,
+        sumAssured: 2500000,
+        policyTerm: '20 years',
+        frequency: 'Annual'
     },
     // Policies for non-smokers
     {
-        policyNum: '7',
-        premium: '15000',
-        sumAssured: '800000',
-        policyTerm: '3 years'
+        policyNum: 7,
+        premium: 15000,
+        sumAssured: 800000,
+        policyTerm: '3 years',
+        frequency: 'Annual'
     },
     {
-        policyNum: '8',
-        premium: '20000',
-        sumAssured: '1200000',
-        policyTerm: '5 years'
+        policyNum: 8,
+        premium: 20000,
+        sumAssured: 1200000,
+        policyTerm: '5 years',
+        frequency: 'Semi-annual'
     },
     {
-        policyNum: '9',
-        premium: '25000',
-        sumAssured: '1500000',
-        policyTerm: '7 years'
+        policyNum: 9,
+        premium: 25000,
+        sumAssured: 1500000,
+        policyTerm: '7 years',
+        frequency: 'Quarterly'
     },
     {
-        policyNum: '10',
-        premium: '18000',
-        sumAssured: '1000000',
-        policyTerm: '4 years'
+        policyNum: 10,
+        premium: 18000,
+        sumAssured: 1000000,
+        policyTerm: '4 years',
+        frequency: 'Monthly'
     },
     {
-        policyNum: '11',
-        premium: '23000',
-        sumAssured: '1300000',
-        policyTerm: '6 years'
+        policyNum: 11,
+        premium: 23000,
+        sumAssured: 1300000,
+        policyTerm: '6 years',
+        frequency: 'Annual'
     },
     {
-        policyNum: '12',
-        premium: '28000',
-        sumAssured: '1800000',
-        policyTerm: '8 years'
+        policyNum: 12,
+        premium: 28000,
+        sumAssured: 1800000,
+        policyTerm: '8 years',
+        frequency: 'Annual'
     }
 ];
 
 //CRUD OPERATIONS 
 // Create a new user with an id.
-// app.post('/users', (req, res) => {
-//     const newUser = req.body;
-//     USERS.push({ ...newUser, id: uuidv4() });
-//     res.send(`User with the name ${newUser.name} added to the database`);
-// });
 app.post('/users', (req, res) => {
     const newUser = req.body;
     createUserInDatabase(newUser)
@@ -130,7 +138,7 @@ app.post('/users', (req, res) => {
             res.send(`User with the name ${createdUser.name} added to the database`);
         })
         .catch(error => {
-            res.status(500).send(error.message);
+            res.status(500).send('Error creating user: ' + error.message);
         });
 });
 function createUserInDatabase(newUser) {
@@ -138,7 +146,6 @@ function createUserInDatabase(newUser) {
     newUser.id = userId;
     return users.create(newUser);
 }
-
 // Read all users
 app.get('/users', function (req, res) {
     users.find({})
@@ -146,15 +153,10 @@ app.get('/users', function (req, res) {
         res.send(user);
     }) 
     .catch(error => {
-        res.send(error);
+        res.send('Error fetching users: '+ error.message);
     })
 });
 // Get a user by it's id.
-// app.get('/users/:id', (req, res) => {
-//     const { id } = req.params;
-//     const foundUser = USERS.find((user) => user.id ==id );
-//     res.send(foundUser);
-// });
 app.get('/users/:id', (req, res) => {
     const { id } = req.params;
     users.find({ _id: id })
@@ -166,20 +168,9 @@ app.get('/users/:id', (req, res) => {
             }
         })
         .catch(error => {
-            res.status(500).send(error.message);
+            res.status(500).send('Error fetching user: ' + error.message);
         });
 });
-// Update user details by it's id.
-// app.put('/users/:id', (req, res) => {
-//     const userId = req.params.id;
-//     const updateUser = req.body;
-//     const index = USERS.findIndex(user => user.id === userId);
-//     if (index === -1) {
-//         return res.status(404).send('User not found');
-//     }
-//     USERS[index] = { ...USERS[index], ...updateUser };
-//     res.send(USERS[index]);
-// });
 app.put('/users/:id', (req, res) => {
     const userId = req.params.id;
     const updateUser = req.body;
@@ -193,7 +184,7 @@ app.put('/users/:id', (req, res) => {
             res.send(updatedUser);
         })
         .catch(error => {
-            res.status(500).send(error.message);
+            res.status(500).send('Error updating user: '+ error.message);
         });
 });
 function updateUserInDatabase(userId, updateUser) {
@@ -203,17 +194,6 @@ function updateUserInDatabase(userId, updateUser) {
         { new: true } 
     );
 }
-
-// Delete a user by it's id.
-// app.delete('/users/:id', (req, res) => {
-//     const userId = req.params.id;
-//     const index = USERS.findIndex(user => user.id === userId);
-//     if (index === -1) {
-//         return res.status(404).send('User not found');
-//     }
-//     const deletedUser = USERS.splice(index, 1);
-//     res.send(deletedUser);
-// });
 app.delete('/users/:id', (req, res) => {
     const userId = req.params.id;
     deleteUserFromDatabase(userId)
@@ -224,58 +204,60 @@ app.delete('/users/:id', (req, res) => {
             res.send('User deleted successfully');
         })
         .catch(error => {
-            res.status(500).send(error.message);
+            res.status(500).send('Error deleting user: '+ error.message);
         });
 });
 function deleteUserFromDatabase(userId) {
     return users.findOneAndDelete({ _id: userId });
 }
+app.post('/createpolicy', (req,res) =>{
+    const newPolicy = req.body;
+    createPolicyInDatabase(newPolicy)
+    .then(createdPolicy =>{
+        res.send(`Policy with number ${createdPolicy.policyNum} added to the database`)
+    })
+    .catch(error => {
+        res.status(500).send('Error creating policy: '+ error.message);
+    });
+});
+function createPolicyInDatabase(newPolicy) {
+    const policyId = uuidv4();
+    newPolicy.id  = policyId;
+    return Policy.create(newPolicy);
+}
 
-app.post("/policy", (req, res) => {
-    const { name, age, isSmoke, isDiabetic, incomePerAnnum } = req.body;
+app.post("/policy", async (req, res) => {
+    try {
+        const { name, age, gender, isSmoke, isDiabetic, incomePerAnnum } = req.body;
 
-    //validate rules
-    if (!name || typeof isSmoke !== 'boolean' || typeof isDiabetic !== 'boolean') {
-        return res.status(400).send('Invalid request body');
-    }
-
-    if(isSmoke){
-        if(age<30){
-            if(incomePerAnnum < 200000) res.send('No policy');
-            else if(incomePerAnnum >= 200000 && incomePerAnnum <600000) suggest = '1';
-            else if(incomePerAnnum >=600000 && incomePerAnnum < 1200000) suggest = '2';
-            else suggest = '3';
-        } 
-        else if(age<60) {
-            if(incomePerAnnum < 200000) res.send('No policy');
-            else if(incomePerAnnum >= 200000 && incomePerAnnum <600000) suggest = '4';
-            else if(incomePerAnnum >=600000 && incomePerAnnum < 1200000) suggest = '5';
-            else suggest = '6';
+        let suggest = '';
+        if (isSmoke) {
+            if (age < 30) {
+                suggest = (incomePerAnnum < 200000) ? '' : (incomePerAnnum < 600000) ? '1' : (incomePerAnnum < 1200000) ? '2' : '3';
+            } else if (age < 60) {
+                suggest = (incomePerAnnum < 200000) ? '' : (incomePerAnnum < 600000) ? '4' : (incomePerAnnum < 1200000) ? '5' : '6';
+            }
+        } else {
+            if (age < 30) {
+                suggest = (incomePerAnnum < 200000) ? '' : (incomePerAnnum < 600000) ? '7' : (incomePerAnnum < 1200000) ? '8' : '9';
+            } else if (age < 60) {
+                suggest = (incomePerAnnum < 200000) ? '' : (incomePerAnnum < 600000) ? '10' : (incomePerAnnum < 1200000) ? '11' : '12';
+            }
         }
-        else res.send('No Policy');
-    }
-    else{
-        if(age<30){
-            if(incomePerAnnum < 200000) res.send('No policy');
-            else if(incomePerAnnum >= 200000 && incomePerAnnum <600000) suggest = '7';
-            else if(incomePerAnnum >=600000 && incomePerAnnum < 1200000) suggest = '8';
-            else suggest = '9';
-        } 
-        else if(age<60) {
-            if(incomePerAnnum < 200000) res.send('No policy');
-            else if(incomePerAnnum >= 200000 && incomePerAnnum <600000) suggest = '10';
-            else if(incomePerAnnum >=600000 && incomePerAnnum < 1200000) suggest = '11';
-            else suggest = '12';
+        if (!suggest) {
+            return res.send('No policy');
         }
-        else res.send('No policy');
-    }
-    const suggestedPolicy = policies.find(policy => policy.policyNum === suggest);
-    console.log(suggestedPolicy);
-    if (!suggestedPolicy) {
-        return res.status(404).send('Policy not found');
-    }
 
-    res.send(suggestedPolicy);
+        const suggestedPolicy = await Policy.findOne({ policyNum: suggest });
+
+        if (!suggestedPolicy) {
+            return res.status(404).send('Policy not found');
+        }
+
+        res.send(suggestedPolicy);
+    } catch (error) {
+        res.status(500).send('Error finding policy: ' + error.message);
+    }
 });
 
 app.get('/', (req, res) => {
