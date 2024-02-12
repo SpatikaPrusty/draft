@@ -12,32 +12,32 @@ connect();
 
 const { v4: uuidv4 } = require('uuid');
 
-let users= [
-// {
-//     name:'Spatika',
-//     age: 21,
-//     isSmoke: true,
-//     isDiabetic: false,
-//     incomePerAnnum: 500000,
-//     id: '1b892a53-l310-4347-b350-14c017fe0872'
-// },
-// {
-//     name:'Lucky',
-//     age: 49,
-//     isSmoke: false,
-//     isDiabetic: false,
-//     incomePerAnnum: 900000,
-//     id: '1b772a93-f318-4347-b350-14d917fe0892'
-// },
-// {
-//     name:'Nipun',
-//     age: 30,
-//     isSmoke: false,
-//     isDiabetic: true,
-//     incomePerAnnum: 1000000,
-//     id: '1d772x53-f318-4347-b350-14f017fe0018'
-// }
-]
+let USERS= [
+{
+    name:'Spatika',
+    age: 21,
+    isSmoke: true,
+    isDiabetic: false,
+    incomePerAnnum: 500000,
+    id: '1b892a53-l310-4347-b350-14c017fe0872'
+},
+{
+    name:'Lucky',
+    age: 49,
+    isSmoke: false,
+    isDiabetic: false,
+    incomePerAnnum: 900000,
+    id: '1b772a93-f318-4347-b350-14d917fe0892'
+},
+{
+    name:'Nipun',
+    age: 30,
+    isSmoke: false,
+    isDiabetic: true,
+    incomePerAnnum: 1000000,
+    id: '1d772x53-f318-4347-b350-14f017fe0018'
+}
+];
 
 let policies = [
     // Policies for smokers
@@ -120,39 +120,39 @@ let policies = [
 // Create a new user with an id.
 app.post('/users', (req, res) => {
     const newUser = req.body;
-    users.push({ ...newUser, id: uuidv4() });
+    USERS.push({ ...newUser, id: uuidv4() });
     res.send(`User with the name ${newUser.name} added to the database`);
 });
 
 // Read all users
 app.get('/users', (req, res) => {
-    res.send(users);
+    res.send(USERS);
 });
 // Get a user by it's id.
 app.get('/users/:id', (req, res) => {
     const { id } = req.params;
-    const foundUser = users.find((user) => user.id ==id );
+    const foundUser = USERS.find((user) => user.id ==id );
     res.send(foundUser);
 });
 // Update user details by it's id.
 app.put('/users/:id', (req, res) => {
     const userId = req.params.id;
     const updateUser = req.body;
-    const index = users.findIndex(user => user.id === userId);
+    const index = USERS.findIndex(user => user.id === userId);
     if (index === -1) {
         return res.status(404).send('User not found');
     }
-    users[index] = { ...users[index], ...updateUser };
-    res.send(users[index]);
+    USERS[index] = { ...USERS[index], ...updateUser };
+    res.send(USERS[index]);
 });
 // Delete a user by it's id.
 app.delete('/users/:id', (req, res) => {
     const userId = req.params.id;
-    const index = users.findIndex(user => user.id === userId);
+    const index = USERS.findIndex(user => user.id === userId);
     if (index === -1) {
         return res.status(404).send('User not found');
     }
-    const deletedUser = users.splice(index, 1);
+    const deletedUser = USERS.splice(index, 1);
     res.send(deletedUser);
 });
 
