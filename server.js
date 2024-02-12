@@ -118,43 +118,118 @@ let policies = [
 
 //CRUD OPERATIONS 
 // Create a new user with an id.
+// app.post('/users', (req, res) => {
+//     const newUser = req.body;
+//     USERS.push({ ...newUser, id: uuidv4() });
+//     res.send(`User with the name ${newUser.name} added to the database`);
+// });
 app.post('/users', (req, res) => {
     const newUser = req.body;
-    USERS.push({ ...newUser, id: uuidv4() });
-    res.send(`User with the name ${newUser.name} added to the database`);
+    createUserInDatabase(newUser)
+        .then(createdUser => {
+            res.send(`User with the name ${createdUser.name} added to the database`);
+        })
+        .catch(error => {
+            res.status(500).send(error.message);
+        });
 });
+function createUserInDatabase(newUser) {
+    const userId = uuidv4();
+    newUser.id = userId;
+    return users.create(newUser);
+}
 
 // Read all users
-app.get('/users', (req, res) => {
-    res.send(USERS);
+app.get('/users', function (req, res) {
+    users.find({})
+    .then(user => {
+        res.send(user);
+    }) 
+    .catch(error => {
+        res.send(error);
+    })
 });
 // Get a user by it's id.
+// app.get('/users/:id', (req, res) => {
+//     const { id } = req.params;
+//     const foundUser = USERS.find((user) => user.id ==id );
+//     res.send(foundUser);
+// });
 app.get('/users/:id', (req, res) => {
     const { id } = req.params;
-    const foundUser = USERS.find((user) => user.id ==id );
-    res.send(foundUser);
+    users.find({ _id: id })
+        .then(foundUser => {
+            if (foundUser) {
+                res.send(foundUser);
+            } else {
+                res.status(404).send("User not found");
+            }
+        })
+        .catch(error => {
+            res.status(500).send(error.message);
+        });
 });
 // Update user details by it's id.
+// app.put('/users/:id', (req, res) => {
+//     const userId = req.params.id;
+//     const updateUser = req.body;
+//     const index = USERS.findIndex(user => user.id === userId);
+//     if (index === -1) {
+//         return res.status(404).send('User not found');
+//     }
+//     USERS[index] = { ...USERS[index], ...updateUser };
+//     res.send(USERS[index]);
+// });
 app.put('/users/:id', (req, res) => {
     const userId = req.params.id;
     const updateUser = req.body;
-    const index = USERS.findIndex(user => user.id === userId);
-    if (index === -1) {
-        return res.status(404).send('User not found');
-    }
-    USERS[index] = { ...USERS[index], ...updateUser };
-    res.send(USERS[index]);
+
+    // Update user details asynchronously
+    updateUserInDatabase(userId, updateUser)
+        .then(updatedUser => {
+            if (!updatedUser) {
+                return res.status(404).send('User not found');
+            }
+            res.send(updatedUser);
+        })
+        .catch(error => {
+            res.status(500).send(error.message);
+        });
 });
+function updateUserInDatabase(userId, updateUser) {
+    return users.findOneAndUpdate(
+        { _id: userId }, 
+        { $set: updateUser }, 
+        { new: true } 
+    );
+}
+
 // Delete a user by it's id.
+// app.delete('/users/:id', (req, res) => {
+//     const userId = req.params.id;
+//     const index = USERS.findIndex(user => user.id === userId);
+//     if (index === -1) {
+//         return res.status(404).send('User not found');
+//     }
+//     const deletedUser = USERS.splice(index, 1);
+//     res.send(deletedUser);
+// });
 app.delete('/users/:id', (req, res) => {
     const userId = req.params.id;
-    const index = USERS.findIndex(user => user.id === userId);
-    if (index === -1) {
-        return res.status(404).send('User not found');
-    }
-    const deletedUser = USERS.splice(index, 1);
-    res.send(deletedUser);
+    deleteUserFromDatabase(userId)
+        .then(deletedUser => {
+            if (!deletedUser) {
+                return res.status(404).send('User not found');
+            }
+            res.send('User deleted successfully');
+        })
+        .catch(error => {
+            res.status(500).send(error.message);
+        });
 });
+function deleteUserFromDatabase(userId) {
+    return users.findOneAndDelete({ _id: userId });
+}
 
 app.post("/policy", (req, res) => {
     const { name, age, isSmoke, isDiabetic, incomePerAnnum } = req.body;
