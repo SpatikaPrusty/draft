@@ -1,10 +1,13 @@
 const dotenv = require("dotenv").config();
 const express = require('express');
 const mongoose = require('mongoose');
+const jwt = require("jsonwebtoken");
 const connect = require('./database/db.js');
 const users = require('./models/users.js');
 const Policy = require('./models/policy.js');
+
 const app = express();
+const secretKey="secretKey";
 
 app.use(express.json());
 connect();
@@ -128,6 +131,60 @@ let policies = [
         frequency: 'Annual'
     }
 ];
+//JWT-TOKEN Generation and implementation
+// app.post("/login", (req, res) => {
+//     const { mail, password } = req.body;
+
+//     // Find the user in the database
+//     users.findOne({ mail, password })
+//         .then(user => {
+//             if (!user) {
+//                 return res.status(401).json({ error: "Invalid email or password" });
+//             }
+//             const token = jwt.sign({ userId: user._id }, secretKey, { expiresIn: '1h' });
+//             res.json({ token });
+//         })
+//         .catch(error => {
+//             console.error("Error logging in:", error);
+//             res.status(500).json({ error: "Internal server error" });
+//         });
+// });
+// function verifyToken(req, res, next) {
+//     const bearerHeader = req.headers['authorization'];
+//     if (typeof bearerHeader !== 'undefined') {
+//         const bearer = bearerHeader.split(" ");
+//         const token = bearer[1];
+//         jwt.verify(token, secretKey, (err, decoded) => {
+//             if (err) {
+//                 res.status(403).json({ error: 'Invalid token' });
+//             } else {
+//                 req.userData = decoded;
+//                 next();
+//             }
+//         });
+//     } else {
+//         res.status(401).json({ error: 'Token is missing' });
+//     }
+// }
+// // Route that requires token verification
+// app.get('/profile', verifyToken, (req, res) => {
+//     const userId = req.userData.userId;
+
+//     // Find the user in the database
+//     users.findById(userId)
+//         .then(user => {
+//             if (!user) {
+//                 res.status(404).json({ error: 'User not found' });
+//             } else {
+//                 // User found, send user data as response
+//                 res.json(user);
+//             }
+//         })
+//         .catch(error => {
+//             console.error('Error fetching user:', error);
+//             res.status(500).json({ error: 'Internal server error' });
+//         });
+// });
 
 //CRUD OPERATIONS 
 // Create a new user with an id.
