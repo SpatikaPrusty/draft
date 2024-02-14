@@ -132,18 +132,6 @@ let policies = [
     }
 ];
 
-// login
-// const userLoginValidate = (req,res,next)=>{
-//     const schema = Joi.object({
-//         mail: Joi.string().mail().required(),
-//         password: Joi.string().min(4).alpanum().required()
-//     });
-//     const {err, value} = schema.validate(req.body);
-//     if(err){
-//         return res.json({message:"Bad request", err})
-//     }
-//     next();
-// }
 app.post("/login", (req, res) => {
     const { mail, password } = req.body;
 
@@ -170,11 +158,22 @@ app.post("/login", (req, res) => {
         });
 });
 app.get('/profile',validateToken, async (req,res)=>{
-    try{
-        const profile = await users.find({}, {password:0});
-        res.status(200).json({data: profile});
-    } catch(err) {
-        res.status(500).json({message:'error',err});
+    try {
+        const token = req.headers['authorization'];
+        const decoded = jwt.verify(token, secretKey);
+        const userId = decoded._id;
+
+        // Find the user in the database by user ID
+        const user = await users.findById(userId, { password: 0 });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({ data: user });
+    } catch (err) {
+        // Token is invalid or user not found
+        res.status(500).json({ message: 'Error fetching user profile', error: err.message });
     }
 });
 function validateToken(req, res, next) {
