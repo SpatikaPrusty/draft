@@ -263,7 +263,7 @@ function validateToken(req, res, next) {
 // Create a new user with an id.
 /**
  * @swagger
- * /users:
+ * /register:
  *   post:
  *     summary: Create a new user
  *     parameters:
@@ -297,6 +297,10 @@ function validateToken(req, res, next) {
  *         description: Bad request
  *       500:
  *         description: Internal Server Error
+ */
+/**
+ * @swagger
+ * /users:
  *   get:
  *     summary: Get all users
  *     responses:
@@ -324,7 +328,7 @@ function validateToken(req, res, next) {
  *       500:
  *         description: Internal Server Error
  */
-app.post('/users', (req, res) => {
+app.post('/register', (req, res) => {
     const newUser = req.body;
     // newUser.password = undefined;
     createUserInDatabase(newUser)
