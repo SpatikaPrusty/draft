@@ -9,6 +9,9 @@ const Joi = require("joi");
 const app = express();
 const secretKey="secretKey";
 
+const swaggerJsDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+
 app.use(express.json());
 connect();
 
@@ -131,7 +134,51 @@ let policies = [
         frequency: 'Annual'
     }
 ];
+const swaggerOptions = {
+    swaggerDefinition: {
+        info: {
+            title: 'Insurance API',
+            describtion: 'API for managing users and policies',
+            contact: {
+                name: "Spatika"
+            },
+            servers:["http://localhost:3000"]
+        }
+    },
+    apis: ["server.js"]
+}
 
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use("/api-docs",swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+/**
+ * @swagger
+ * /login:
+ *  post:
+ *      summary: Log in a user
+ *      parameters:
+ *          - name: body
+ *            in: body
+ *            description: User credentials
+ *            required: true
+ *            schema:
+ *              type: object
+ *              properties:
+ *                  mail:
+ *                      type: string
+ *                  password:
+ *                      type: string
+ *      responses:
+ *          200:
+ *              description: Successful login
+ *          401:
+ *              description: Unauthorized
+ *          500:
+ *              description: Internal Server Error
+ */
+
+
+//login page that generates jwt token
 app.post("/login", (req, res) => {
     const { mail, password } = req.body;
 
@@ -157,6 +204,24 @@ app.post("/login", (req, res) => {
             res.status(500).json({ error: "Internal server error" });
         });
 });
+//returns the details  of that user id.
+/**
+ * @swagger
+ * /profile:
+ *   get:
+ *     summary: Get user profile
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ */
 app.get('/profile',validateToken, async (req,res)=>{
     try {
         const token = req.headers['authorization'];
@@ -176,6 +241,7 @@ app.get('/profile',validateToken, async (req,res)=>{
         res.status(500).json({ message: 'Error fetching user profile', error: err.message });
     }
 });
+//validates the token.
 function validateToken(req, res, next) {
     const token = req.headers['authorization'];
 
@@ -195,6 +261,69 @@ function validateToken(req, res, next) {
 }
 //CRUD OPERATIONS 
 // Create a new user with an id.
+/**
+ * @swagger
+ * /users:
+ *   post:
+ *     summary: Create a new user
+ *     parameters:
+ *       - name: body
+ *         in: body
+ *         description: User data
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             name:
+ *               type: string
+ *             age:
+ *               type: integer
+ *             gender:
+ *               type: string
+ *             isSmoke:
+ *               type: boolean
+ *             isDiabetic:
+ *               type: boolean
+ *             incomePerAnnum:
+ *               type: integer
+ *             mail:
+ *               type: string
+ *             password:
+ *               type: string
+ *     responses:
+ *       200:
+ *         description: User created successfully
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Internal Server Error
+ *   get:
+ *     summary: Get all users
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *         schema:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *             name:
+ *               type: string
+ *             age:
+ *               type: integer
+ *             gender:
+ *               type: string
+ *             isSmoke:
+ *               type: boolean
+ *             isDiabetic:
+ *               type: boolean
+ *             incomePerAnnum:
+ *               type: integer
+ *             mail:
+ *               type: string
+ *       500:
+ *         description: Internal Server Error
+ */
 app.post('/users', (req, res) => {
     const newUser = req.body;
     // newUser.password = undefined;
@@ -222,6 +351,64 @@ app.get('/users', function (req, res) {
     })
 });
 // Get a user by it's id.
+/**
+ * @swagger
+ * /users/{id}:
+ *   get:
+ *     summary: Get user by ID
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: User ID
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *         schema:
+ *           $ref: '#/definitions/User'
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ *   put:
+ *     summary: Update user by ID
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: User ID
+ *         required: true
+ *         type: string
+ *       - name: body
+ *         in: body
+ *         description: Updated user data
+ *         required: true
+ *         schema:
+ *           $ref: '#/definitions/UserInput'
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ *   delete:
+ *     summary: Delete user by ID
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: User ID
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ */
+
 app.get('/users/:id', (req, res) => {
     const { id } = req.params;
     users.find({ _id: id })
@@ -276,7 +463,40 @@ app.delete('/users/:id', (req, res) => {
 function deleteUserFromDatabase(userId) {
     return users.findOneAndDelete({ _id: userId });
 }
+
 //create a policy.
+/**
+ * @swagger
+ * /createpolicy:
+ *   post:
+ *     summary: Create a new policy
+ *     parameters:
+ *       - name: body
+ *         in: body
+ *         description: Policy data
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             policyNum:
+ *               type: number
+ *             premium:
+ *               type: number
+ *             sumAssured:
+ *               type: number
+ *             policyTerm:
+ *               type: string
+ *             policyFrequency:
+ *               type: string
+ *     responses:
+ *       200:
+ *         description: Policy created successfully
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Internal Server Error
+ */
+
 app.post('/createpolicy', (req,res) =>{
     const newPolicy = req.body;
     createPolicyInDatabase(newPolicy)
@@ -293,6 +513,52 @@ function createPolicyInDatabase(newPolicy) {
     return Policy.create(newPolicy);
 }
 //Policy Issuance
+/**
+ * @swagger
+ * /policy:
+ *   post:
+ *     summary: Get suggested policy based on user data
+ *     parameters:
+ *       - name: body
+ *         in: body
+ *         description: User data
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             name:
+ *               type: string
+ *             age:
+ *               type: integer
+ *             gender:
+ *               type: string
+ *             isSmoke:
+ *               type: boolean
+ *             isDiabetic:
+ *               type: boolean
+ *             incomePerAnnum:
+ *               type: integer
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *         schema:
+ *           type: object
+ *     properties:
+ *       policyNum:
+ *         type: number
+ *       premium:
+ *         type: number
+ *       sumAssured:
+ *         type: number
+ *       policyTerm:
+ *         type: string
+ *       policyFrequency:
+ *         type: string
+ *       404:
+ *         description: Policy not found
+ *       500:
+ *         description: Internal Server Error
+ */
 app.post("/policy", async (req, res) => {
     try {
         const { name, age, gender, isSmoke, isDiabetic, incomePerAnnum } = req.body;
@@ -327,8 +593,17 @@ app.post("/policy", async (req, res) => {
     }
 });
 // Homepage
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Welcome message
+ *     responses:
+ *       200:
+ *         description: Welcome to the API
+ */
 app.get('/', (req, res) => {
-    res.send('Welcome to my Express.js server!');
+    res.send('Welcome!');
 });
 
 
