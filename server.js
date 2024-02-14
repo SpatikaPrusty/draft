@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const connect = require('./database/db.js');
 const users = require('./models/users.js');
 const Policy = require('./models/policy.js');
-
+const Joi = require("joi");
 const app = express();
 const secretKey="secretKey";
 
@@ -131,65 +131,74 @@ let policies = [
         frequency: 'Annual'
     }
 ];
-//JWT-TOKEN Generation and implementation
-// app.post("/login", (req, res) => {
-//     const { mail, password } = req.body;
 
-//     // Find the user in the database
-//     users.findOne({ mail, password })
-//         .then(user => {
-//             if (!user) {
-//                 return res.status(401).json({ error: "Invalid email or password" });
-//             }
-//             const token = jwt.sign({ userId: user._id }, secretKey, { expiresIn: '1h' });
-//             res.json({ token });
-//         })
-//         .catch(error => {
-//             console.error("Error logging in:", error);
-//             res.status(500).json({ error: "Internal server error" });
-//         });
-// });
-// function verifyToken(req, res, next) {
-//     const bearerHeader = req.headers['authorization'];
-//     if (typeof bearerHeader !== 'undefined') {
-//         const bearer = bearerHeader.split(" ");
-//         const token = bearer[1];
-//         jwt.verify(token, secretKey, (err, decoded) => {
-//             if (err) {
-//                 res.status(403).json({ error: 'Invalid token' });
-//             } else {
-//                 req.userData = decoded;
-//                 next();
-//             }
-//         });
-//     } else {
-//         res.status(401).json({ error: 'Token is missing' });
+// login
+// const userLoginValidate = (req,res,next)=>{
+//     const schema = Joi.object({
+//         mail: Joi.string().mail().required(),
+//         password: Joi.string().min(4).alpanum().required()
+//     });
+//     const {err, value} = schema.validate(req.body);
+//     if(err){
+//         return res.json({message:"Bad request", err})
 //     }
+//     next();
 // }
-// // Route that requires token verification
-// app.get('/profile', verifyToken, (req, res) => {
-//     const userId = req.userData.userId;
+app.post("/login", (req, res) => {
+    const { mail, password } = req.body;
 
-//     // Find the user in the database
-//     users.findById(userId)
-//         .then(user => {
-//             if (!user) {
-//                 res.status(404).json({ error: 'User not found' });
-//             } else {
-//                 // User found, send user data as response
-//                 res.json(user);
-//             }
-//         })
-//         .catch(error => {
-//             console.error('Error fetching user:', error);
-//             res.status(500).json({ error: 'Internal server error' });
-//         });
-// });
+    // Find the user in the database
+    users.findOne({ mail, password })
+        .then(user => {
+            if (!user) {
+                // User not found or invalid credentials
+                return res.status(401).json({ error: "Invalid email or password" });
+            }
+            const tokenObject = { 
+                _id: user._id ,
+                name: user.name
+            }
+            // User found, generate JWT token
+            const token = jwt.sign(tokenObject, secretKey, { expiresIn: '1h' });
 
+            // Send the token as response
+            res.status(200).json({ token, tokenObject});
+        })
+        .catch(error => {
+            console.error("Error logging in:", error);
+            res.status(500).json({ error: "Internal server error" });
+        });
+});
+app.get('/profile',validateToken, async (req,res)=>{
+    try{
+        const profile = await users.find({}, {password:0});
+        res.status(200).json({data: profile});
+    } catch(err) {
+        res.status(500).json({message:'error',err});
+    }
+});
+function validateToken(req, res, next) {
+    const token = req.headers['authorization'];
+
+    // Check if token is missing
+    if (!token) {
+        return res.status(403).json({ message: "Token is required" });
+    }
+
+    try {
+        // Verify the token
+        const decoded = jwt.verify(token, secretKey);
+        return next(); // Proceed to the next middleware
+    } catch (err) {
+        // Token is invalid
+        res.status(500).json({ message: "Invalid Token" });
+    }
+}
 //CRUD OPERATIONS 
 // Create a new user with an id.
 app.post('/users', (req, res) => {
     const newUser = req.body;
+    // newUser.password = undefined;
     createUserInDatabase(newUser)
         .then(createdUser => {
             res.send(`User with the name ${createdUser.name} added to the database`);
@@ -228,11 +237,11 @@ app.get('/users/:id', (req, res) => {
             res.status(500).send('Error fetching user: ' + error.message);
         });
 });
+// Update user details by it's id.
 app.put('/users/:id', (req, res) => {
     const userId = req.params.id;
     const updateUser = req.body;
 
-    // Update user details asynchronously
     updateUserInDatabase(userId, updateUser)
         .then(updatedUser => {
             if (!updatedUser) {
@@ -251,6 +260,7 @@ function updateUserInDatabase(userId, updateUser) {
         { new: true } 
     );
 }
+// Delete a udser by it's id.
 app.delete('/users/:id', (req, res) => {
     const userId = req.params.id;
     deleteUserFromDatabase(userId)
@@ -267,6 +277,7 @@ app.delete('/users/:id', (req, res) => {
 function deleteUserFromDatabase(userId) {
     return users.findOneAndDelete({ _id: userId });
 }
+//create a policy.
 app.post('/createpolicy', (req,res) =>{
     const newPolicy = req.body;
     createPolicyInDatabase(newPolicy)
@@ -282,7 +293,7 @@ function createPolicyInDatabase(newPolicy) {
     newPolicy.id  = policyId;
     return Policy.create(newPolicy);
 }
-
+//Policy Issuance
 app.post("/policy", async (req, res) => {
     try {
         const { name, age, gender, isSmoke, isDiabetic, incomePerAnnum } = req.body;
@@ -316,10 +327,12 @@ app.post("/policy", async (req, res) => {
         res.status(500).send('Error finding policy: ' + error.message);
     }
 });
-
+// Homepage
 app.get('/', (req, res) => {
     res.send('Welcome to my Express.js server!');
 });
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
