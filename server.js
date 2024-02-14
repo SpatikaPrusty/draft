@@ -1,10 +1,16 @@
 const dotenv = require("dotenv").config();
 const express = require('express');
 const mongoose = require('mongoose');
+const jwt = require("jsonwebtoken");
 const connect = require('./database/db.js');
 const users = require('./models/users.js');
 const Policy = require('./models/policy.js');
+const Joi = require("joi");
 const app = express();
+const secretKey="secretKey";
+
+const swaggerJsDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 
 app.use(express.json());
 connect();
@@ -128,11 +134,199 @@ let policies = [
         frequency: 'Annual'
     }
 ];
+const swaggerOptions = {
+    swaggerDefinition: {
+        info: {
+            title: 'Insurance API',
+            describtion: 'API for managing users and policies',
+            contact: {
+                name: "Spatika"
+            },
+            servers:["http://localhost:3000"]
+        }
+    },
+    apis: ["server.js"]
+}
 
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use("/api-docs",swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+/**
+ * @swagger
+ * /login:
+ *  post:
+ *      summary: Log in a user
+ *      parameters:
+ *          - name: body
+ *            in: body
+ *            description: User credentials
+ *            required: true
+ *            schema:
+ *              type: object
+ *              properties:
+ *                  mail:
+ *                      type: string
+ *                  password:
+ *                      type: string
+ *      responses:
+ *          200:
+ *              description: Successful login
+ *          401:
+ *              description: Unauthorized
+ *          500:
+ *              description: Internal Server Error
+ */
+
+
+//login page that generates jwt token
+app.post("/login", (req, res) => {
+    const { mail, password } = req.body;
+
+    // Find the user in the database
+    users.findOne({ mail, password })
+        .then(user => {
+            if (!user) {
+                // User not found or invalid credentials
+                return res.status(401).json({ error: "Invalid email or password" });
+            }
+            const tokenObject = { 
+                _id: user._id ,
+                name: user.name
+            }
+            // User found, generate JWT token
+            const token = jwt.sign(tokenObject, secretKey, { expiresIn: '1h' });
+
+            // Send the token as response
+            res.status(200).json({ token, tokenObject});
+        })
+        .catch(error => {
+            console.error("Error logging in:", error);
+            res.status(500).json({ error: "Internal server error" });
+        });
+});
+//returns the details  of that user id.
+/**
+ * @swagger
+ * /profile:
+ *   get:
+ *     summary: Get user profile
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ */
+app.get('/profile',validateToken, async (req,res)=>{
+    try {
+        const token = req.headers['authorization'];
+        const decoded = jwt.verify(token, secretKey);
+        const userId = decoded._id;
+
+        // Find the user in the database by user ID
+        const user = await users.findById(userId, { password: 0 });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({ data: user });
+    } catch (err) {
+        // Token is invalid or user not found
+        res.status(500).json({ message: 'Error fetching user profile', error: err.message });
+    }
+});
+//validates the token.
+function validateToken(req, res, next) {
+    const token = req.headers['authorization'];
+
+    // Check if token is missing
+    if (!token) {
+        return res.status(403).json({ message: "Token is required" });
+    }
+
+    try {
+        // Verify the token
+        const decoded = jwt.verify(token, secretKey);
+        return next(); // Proceed to the next middleware
+    } catch (err) {
+        // Token is invalid
+        res.status(500).json({ message: "Invalid Token" });
+    }
+}
 //CRUD OPERATIONS 
 // Create a new user with an id.
+/**
+ * @swagger
+ * /users:
+ *   post:
+ *     summary: Create a new user
+ *     parameters:
+ *       - name: body
+ *         in: body
+ *         description: User data
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             name:
+ *               type: string
+ *             age:
+ *               type: integer
+ *             gender:
+ *               type: string
+ *             isSmoke:
+ *               type: boolean
+ *             isDiabetic:
+ *               type: boolean
+ *             incomePerAnnum:
+ *               type: integer
+ *             mail:
+ *               type: string
+ *             password:
+ *               type: string
+ *     responses:
+ *       200:
+ *         description: User created successfully
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Internal Server Error
+ *   get:
+ *     summary: Get all users
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *         schema:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *             name:
+ *               type: string
+ *             age:
+ *               type: integer
+ *             gender:
+ *               type: string
+ *             isSmoke:
+ *               type: boolean
+ *             isDiabetic:
+ *               type: boolean
+ *             incomePerAnnum:
+ *               type: integer
+ *             mail:
+ *               type: string
+ *       500:
+ *         description: Internal Server Error
+ */
 app.post('/users', (req, res) => {
     const newUser = req.body;
+    // newUser.password = undefined;
     createUserInDatabase(newUser)
         .then(createdUser => {
             res.send(`User with the name ${createdUser.name} added to the database`);
@@ -157,6 +351,64 @@ app.get('/users', function (req, res) {
     })
 });
 // Get a user by it's id.
+/**
+ * @swagger
+ * /users/{id}:
+ *   get:
+ *     summary: Get user by ID
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: User ID
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *         schema:
+ *           $ref: '#/definitions/User'
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ *   put:
+ *     summary: Update user by ID
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: User ID
+ *         required: true
+ *         type: string
+ *       - name: body
+ *         in: body
+ *         description: Updated user data
+ *         required: true
+ *         schema:
+ *           $ref: '#/definitions/UserInput'
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ *   delete:
+ *     summary: Delete user by ID
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: User ID
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal Server Error
+ */
+
 app.get('/users/:id', (req, res) => {
     const { id } = req.params;
     users.find({ _id: id })
@@ -171,11 +423,11 @@ app.get('/users/:id', (req, res) => {
             res.status(500).send('Error fetching user: ' + error.message);
         });
 });
+// Update user details by it's id.
 app.put('/users/:id', (req, res) => {
     const userId = req.params.id;
     const updateUser = req.body;
 
-    // Update user details asynchronously
     updateUserInDatabase(userId, updateUser)
         .then(updatedUser => {
             if (!updatedUser) {
@@ -194,6 +446,7 @@ function updateUserInDatabase(userId, updateUser) {
         { new: true } 
     );
 }
+// Delete a udser by it's id.
 app.delete('/users/:id', (req, res) => {
     const userId = req.params.id;
     deleteUserFromDatabase(userId)
@@ -210,6 +463,40 @@ app.delete('/users/:id', (req, res) => {
 function deleteUserFromDatabase(userId) {
     return users.findOneAndDelete({ _id: userId });
 }
+
+//create a policy.
+/**
+ * @swagger
+ * /createpolicy:
+ *   post:
+ *     summary: Create a new policy
+ *     parameters:
+ *       - name: body
+ *         in: body
+ *         description: Policy data
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             policyNum:
+ *               type: number
+ *             premium:
+ *               type: number
+ *             sumAssured:
+ *               type: number
+ *             policyTerm:
+ *               type: string
+ *             policyFrequency:
+ *               type: string
+ *     responses:
+ *       200:
+ *         description: Policy created successfully
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Internal Server Error
+ */
+
 app.post('/createpolicy', (req,res) =>{
     const newPolicy = req.body;
     createPolicyInDatabase(newPolicy)
@@ -225,7 +512,53 @@ function createPolicyInDatabase(newPolicy) {
     newPolicy.id  = policyId;
     return Policy.create(newPolicy);
 }
-
+//Policy Issuance
+/**
+ * @swagger
+ * /policy:
+ *   post:
+ *     summary: Get suggested policy based on user data
+ *     parameters:
+ *       - name: body
+ *         in: body
+ *         description: User data
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             name:
+ *               type: string
+ *             age:
+ *               type: integer
+ *             gender:
+ *               type: string
+ *             isSmoke:
+ *               type: boolean
+ *             isDiabetic:
+ *               type: boolean
+ *             incomePerAnnum:
+ *               type: integer
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *         schema:
+ *           type: object
+ *     properties:
+ *       policyNum:
+ *         type: number
+ *       premium:
+ *         type: number
+ *       sumAssured:
+ *         type: number
+ *       policyTerm:
+ *         type: string
+ *       policyFrequency:
+ *         type: string
+ *       404:
+ *         description: Policy not found
+ *       500:
+ *         description: Internal Server Error
+ */
 app.post("/policy", async (req, res) => {
     try {
         const { name, age, gender, isSmoke, isDiabetic, incomePerAnnum } = req.body;
@@ -259,10 +592,21 @@ app.post("/policy", async (req, res) => {
         res.status(500).send('Error finding policy: ' + error.message);
     }
 });
-
+// Homepage
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Welcome message
+ *     responses:
+ *       200:
+ *         description: Welcome to the API
+ */
 app.get('/', (req, res) => {
-    res.send('Welcome to my Express.js server!');
+    res.send('Welcome!');
 });
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
