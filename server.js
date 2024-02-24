@@ -7,7 +7,9 @@ const users = require('./models/users.js');
 const Policy = require('./models/policy.js');
 const Joi = require("joi");
 const app = express();
-const secretKey="secretKey";
+const secretKey=process.env.JWT_SECRET;
+const cors = require('cors');
+app.use(cors());
 
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
@@ -177,11 +179,10 @@ app.use("/api-docs",swaggerUi.serve, swaggerUi.setup(swaggerDocs));
  *              description: Internal Server Error
  */
 
-
-//login page that generates jwt token
+// Find the user in the database
 app.post("/login", (req, res) => {
     const { mail, password } = req.body;
-
+    
     // Find the user in the database
     users.findOne({ mail, password })
         .then(user => {
@@ -189,77 +190,20 @@ app.post("/login", (req, res) => {
                 // User not found or invalid credentials
                 return res.status(401).json({ error: "Invalid email or password" });
             }
-            const tokenObject = { 
-                _id: user._id ,
-                name: user.name
-            }
-            // User found, generate JWT token
-            const token = jwt.sign(tokenObject, secretKey, { expiresIn: '1h' });
+    
+            // Generate a JWT token
+            const token = jwt.sign({ _id: user._id }, secretKey);
 
-            // Send the token as response
-            res.status(200).json({ token, tokenObject});
+            // Send the token and user data as response
+            res.status(200).json({ token, user });
         })
         .catch(error => {
             console.error("Error logging in:", error);
             res.status(500).json({ error: "Internal server error" });
         });
 });
-//returns the details  of that user id.
-/**
- * @swagger
- * /profile:
- *   get:
- *     summary: Get user profile
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Successful operation
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: User not found
- *       500:
- *         description: Internal Server Error
- */
-app.get('/profile',validateToken, async (req,res)=>{
-    try {
-        const token = req.headers['authorization'];
-        const decoded = jwt.verify(token, secretKey);
-        const userId = decoded._id;
 
-        // Find the user in the database by user ID
-        const user = await users.findById(userId, { password: 0 });
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        res.status(200).json({ data: user });
-    } catch (err) {
-        // Token is invalid or user not found
-        res.status(500).json({ message: 'Error fetching user profile', error: err.message });
-    }
-});
-//validates the token.
-function validateToken(req, res, next) {
-    const token = req.headers['authorization'];
-
-    // Check if token is missing
-    if (!token) {
-        return res.status(403).json({ message: "Token is required" });
-    }
-
-    try {
-        // Verify the token
-        const decoded = jwt.verify(token, secretKey);
-        return next(); // Proceed to the next middleware
-    } catch (err) {
-        // Token is invalid
-        res.status(500).json({ message: "Invalid Token" });
-    }
-}
-//CRUD OPERATIONS 
+// CRUD OPERATIONS 
 // Create a new user with an id.
 /**
  * @swagger
@@ -354,6 +298,7 @@ app.get('/users', function (req, res) {
         res.send('Error fetching users: '+ error.message);
     })
 });
+
 // Get a user by it's id.
 /**
  * @swagger
@@ -591,7 +536,7 @@ app.post("/policy", async (req, res) => {
             return res.status(404).send('Policy not found');
         }
 
-        res.send(suggestedPolicy);
+        res.status(200).json({ suggestedPolicy });
     } catch (error) {
         res.status(500).send('Error finding policy: ' + error.message);
     }
